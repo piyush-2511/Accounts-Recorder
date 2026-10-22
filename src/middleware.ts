@@ -44,14 +44,15 @@ export async function middleware(request: NextRequest) {
     return isApi ? NextResponse.json({ error: "Forbidden" }, { status: 403 }) : redirectWithCookies(request, res, "/record");
   }
 
-  // Admins must complete TOTP two-factor sign-in (aal2) before reaching anything else.
-  if (profile.role === "admin" && !isExemptFromMfa(path)) {
-    const { data: aal } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
-    if (aal && aal.currentLevel !== "aal2") {
-      if (isApi) return NextResponse.json({ error: "Two-factor sign-in required" }, { status: 401 });
-      return redirectWithCookies(request, res, `/mfa?next=${encodeURIComponent(path + request.nextUrl.search)}`);
-    }
-  }
+   // Admins must complete TOTP two-factor sign-in (aal2). Turn off with REQUIRE_ADMIN_MFA=false.
+   const mfaRequired = process.env.REQUIRE_ADMIN_MFA !== "false";
+   if (mfaRequired && profile.role === "admin" && !isExemptFromMfa(path)) {
+     const { data: aal } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+     if (aal && aal.currentLevel !== "aal2") {
+       if (isApi) return NextResponse.json({ error: "Two-factor sign-in required" }, { status: 401 });
+       return redirectWithCookies(request, res, `/mfa?next=${encodeURIComponent(path + request.nextUrl.search)}`);
+     }
+   }
 
   return res;
 }
