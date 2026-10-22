@@ -1,1 +1,0 @@
-npm run create:admin -- piyushkumar76349856@gmail.com "Piyush Kumar" "Piyush@256"
