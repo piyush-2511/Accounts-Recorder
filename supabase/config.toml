@@ -1,0 +1,29 @@
+# Local development with the Supabase CLI: `npx supabase start`
+project_id = "accounts-recorder"
+
+[api]
+port = 54321
+schemas = ["public"]
+
+[db]
+port = 54322
+major_version = 15
+
+[auth]
+site_url = "http://localhost:3000"
+additional_redirect_urls = ["http://localhost:3000/auth/confirm"]
+enable_signup = false
+jwt_expiry = 3600
+enable_refresh_token_rotation = true
+minimum_password_length = 10
+
+[auth.mfa.totp]
+enroll_enabled = true
+verify_enabled = true
+
+[storage]
+file_size_limit = "5MiB"
+
+[db.seed]
+enabled = true
+sql_paths = ["./seed.sql"]
