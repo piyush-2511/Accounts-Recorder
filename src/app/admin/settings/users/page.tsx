@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { requireAdmin } from "@/lib/auth/get-session";
 import { createClient } from "@/lib/supabase/server";
 import { Badge } from "@/components/ui/badge";
@@ -15,7 +16,7 @@ export const metadata = { title: "Users" };
 export default async function Users({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const sp = await searchParams;
   const me = await requireAdmin();
-  const { data } = await (await createClient()).from("profiles").select("*").order("created_at");
+  const { data } = await (await createClient()).from("profiles").select("*").is("deleted_at", null).order("created_at");
   const users = (data ?? []) as Profile[];
   const { data: authList } = await createAdminClient().auth.admin.listUsers({ perPage: 200 });
   const pending = new Set((authList?.users ?? []).filter((u) => u.user_metadata?.needs_password === true || !u.last_sign_in_at).map((u) => u.id));
@@ -57,11 +58,16 @@ export default async function Users({ searchParams }: { searchParams: Promise<Re
                     <SubmitButton variant="ghost" size="sm" pendingText="Sending...">Resend invitation</SubmitButton>
                   </form>
                 ) : null}
+                {u.role !== "admin" ? (
+                  <Link href={`/admin/settings/users/${u.id}`} className="text-sm font-medium text-primary hover:underline">
+                    Entry controls{!u.can_record ? " (recording off)" : u.allowed_source_ids || u.allowed_category_ids || !u.can_record_income || u.max_entry_amount ? " (restricted)" : ""}
+                  </Link>
+                ) : null}
                 {u.id !== me.profile.id ? (
                   <form action={deleteUserAction} className="flex items-center gap-2">
                     <input type="hidden" name="id" value={u.id} />
-                    <label className="flex items-center gap-1.5 text-xs text-muted-foreground"><input type="checkbox" name="confirm" value="yes" required className="h-4 w-4" /> Yes, delete {u.email}</label>
-                    <SubmitButton variant="ghost" size="sm" className="text-danger" pendingText="Deleting...">Delete user</SubmitButton>
+                    <label className="flex items-center gap-1.5 text-xs text-muted-foreground"><input type="checkbox" name="confirm" value="yes" required className="h-4 w-4" /> Yes, remove {u.full_name}. Their entries stay under their name.</label>
+                    <SubmitButton variant="ghost" size="sm" className="text-danger" pendingText="Removing...">Delete user</SubmitButton>
                   </form>
                 ) : null}
               </div>

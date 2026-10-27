@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { Trash2 } from "lucide-react";
+import { DeleteEntryButton } from "@/components/entry/delete-entry-button";
 import { createClient } from "@/lib/supabase/server";
 import { getEntry } from "@/lib/data/entries";
 import { loadFormData } from "@/lib/data/form-data";
@@ -7,7 +7,6 @@ import { EntryForm } from "@/components/entry/entry-form";
 import { EntryDetails } from "@/components/entry/entry-details";
 import { VoucherViewer } from "@/components/review/voucher-viewer";
 import { Alert } from "@/components/ui/alert";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PageHeader } from "@/components/shared/page-header";
 import { StatusChip } from "@/components/shared/status-chip";
@@ -60,10 +59,7 @@ export default async function AdminEntryPage({ params, searchParams }: { params:
                   hidden={from ? { from } : undefined}
                   {...data}
                 />
-                <form action={adminDeleteEntryAction} className="mt-6 border-t pt-4">
-                  <input type="hidden" name="id" value={entry.id} />
-                  <Button type="submit" variant="ghost" className="text-danger hover:bg-danger/10"><Trash2 className="h-4 w-4" aria-hidden /> Delete entry</Button>
-                </form>
+                <div className="mt-6 border-t pt-4"><DeleteEntryButton id={entry.id} action={adminDeleteEntryAction} label="Delete entry" size="md" /></div>
               </>
             ) : (
               <EntryDetails entry={entry} />

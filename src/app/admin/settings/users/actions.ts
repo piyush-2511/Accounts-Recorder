@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { publicEnv } from "@/lib/env";
 import { back } from "@/lib/data/flash";
+import { dbMessage } from "@/lib/data/entries";
 import { uuid } from "@/lib/validation/common";
 import { inviteUserSchema } from "@/lib/validation/settings";
 import { ROLES } from "@/lib/constants/roles";
@@ -67,6 +68,8 @@ export async function resendInviteAction(formData: FormData): Promise<void> {
   // They have not set a password yet, so they own no entries: safe to recreate the pending account with a fresh link.
   const { error: delError } = await admin.auth.admin.deleteUser(id.data);
   if (delError) back(PATH, "err", "Could not reset the invitation. Try again.");
+  // The profile no longer disappears with the login, so remove the old one before inviting again.
+  await admin.from("profiles").delete().eq("id", id.data);
   const { data, error } = await admin.auth.admin.inviteUserByEmail(target.email, {
     data: { full_name: fullName, needs_password: true },
     redirectTo: `${publicEnv.siteUrl}/accept-invite`,
@@ -78,8 +81,9 @@ export async function resendInviteAction(formData: FormData): Promise<void> {
 }
 
 /**
- * Permanently deletes a user who has no history (no entries recorded, nothing reviewed or exported).
- * People with history must be disabled instead (untick Active) so records stay intact.
+ * Removes a person (staff or admin). They can no longer sign in. Everything they recorded stays,
+ * shown under their name only. Someone who never did anything (for example an unaccepted invitation)
+ * is deleted completely. Blocked for yourself, for the last admin, and while the organisation still owes them money.
  */
 export async function deleteUserAction(formData: FormData): Promise<void> {
   const me = await requireAdmin();
@@ -87,13 +91,61 @@ export async function deleteUserAction(formData: FormData): Promise<void> {
   if (!id.success) back(PATH, "err", "Invalid request.");
   if (formData.get("confirm") !== "yes") back(PATH, "err", "Tick the confirmation box to delete.");
   if (id.data === me.profile.id) back(PATH, "err", "You cannot delete your own account.");
+
+  const supabase = await createClient();
+  const { data: before } = await supabase.from("profiles").select("full_name").eq("id", id.data).maybeSingle();
+  const { data: outcome, error } = await supabase.rpc("remove_user", { p_id: id.data });
+  if (error) back(PATH, "err", dbMessage(error));
+
+  // The profile is dealt with, so removing the login cannot orphan anything. A missing login is fine.
   const admin = createAdminClient();
-  const { data: found } = await admin.auth.admin.getUserById(id.data);
-  if (!found?.user) back(PATH, "err", "User not found.");
-  const { count } = await admin.from("entries").select("id", { count: "exact", head: true }).eq("created_by", id.data);
-  if (count) back(PATH, "err", "This person has recorded entries, so they cannot be deleted. Untick Active to disable them instead.");
-  const { error } = await admin.auth.admin.deleteUser(id.data);
-  if (error) back(PATH, "err", "This person has review or export history, so they cannot be deleted. Untick Active to disable them instead.");
+  const { error: authError } = await admin.auth.admin.deleteUser(id.data);
+  if (authError && !/not found/i.test(authError.message)) {
+    back(PATH, "err", "The person was removed from the app but their login could not be deleted. They cannot sign in. Try deleting again later.");
+  }
+  revalidatePath("/admin", "layout");
+  const name = before?.full_name ?? "The person";
+  back(PATH, "ok", outcome === "retired" ? `${name} removed. Their entries stay under their name.` : `${name} deleted.`);
+}
+
+/** Controls what a recorder may enter: switch recording off, limit payment sources, categories, income and amount. */
+export async function saveControlsAction(formData: FormData): Promise<void> {
+  await requireAdmin();
+  const id = uuid.safeParse(formData.get("id"));
+  if (!id.success) back(PATH, "err", "Invalid request.");
+  const back_ = `${PATH}/${id.data}`;
+
+  const supabase = await createClient();
+  const [{ data: cats }, { data: srcs }] = await Promise.all([supabase.from("categories").select("id"), supabase.from("payment_sources").select("id")]);
+  const allCats = (cats ?? []).map((c) => c.id as number);
+  const allSrcs = (srcs ?? []).map((c) => c.id as number);
+
+  // Ticked boxes only count if they are real ids. Everything ticked means "no restriction" (stored as null).
+  const pick = (name: string, all: number[]) => {
+    const chosen = [...new Set(formData.getAll(name).map(Number).filter((n) => Number.isInteger(n) && all.includes(n)))];
+    return chosen.length === all.length ? null : chosen;
+  };
+  const sources = pick("source_ids", allSrcs);
+  const categories = pick("category_ids", allCats);
+  if ((sources && sources.length === 0) || (categories && categories.length === 0)) {
+    back(back_, "err", "Choose at least one payment source and one category, or switch recording off.");
+  }
+
+  const rawMax = String(formData.get("max_entry_amount") ?? "").trim();
+  const max = rawMax === "" ? null : Number(rawMax);
+  if (max !== null && (!Number.isFinite(max) || max <= 0 || max > 100_000_000)) back(back_, "err", "Enter a valid amount limit, or leave it blank for no limit.");
+
+  const { error } = await supabase
+    .from("profiles")
+    .update({
+      can_record: formData.get("can_record") === "on",
+      can_record_income: formData.get("can_record_income") === "on",
+      allowed_source_ids: sources,
+      allowed_category_ids: categories,
+      max_entry_amount: max === null ? null : Math.round(max * 100) / 100,
+    })
+    .eq("id", id.data);
+  if (error) back(back_, "err", "Could not save the controls.");
   revalidatePath(PATH);
-  back(PATH, "ok", `${found.user.email} deleted.`);
+  back(back_, "ok", "Controls saved. They apply from the next entry.");
 }

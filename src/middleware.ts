@@ -1,7 +1,9 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { updateSession, redirectWithCookies } from "@/lib/supabase/middleware";
 
-const PUBLIC = ["/login", "/forgot-password", "/auth/confirm", "/api/health"];
+// /accept-invite is reachable without a session on purpose: invite emails land there with the session in the
+// URL fragment (which the server cannot see), and the page signs the person in before showing the form.
+const PUBLIC = ["/login", "/forgot-password", "/auth/confirm", "/accept-invite", "/api/health"];
 const MFA_EXEMPT = ["/mfa", "/logout", "/auth/confirm", "/accept-invite", "/login", "/forgot-password", "/api/health"];
 
 const isPublic = (p: string) => PUBLIC.some((x) => p === x || p.startsWith(`${x}/`));

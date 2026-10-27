@@ -25,7 +25,7 @@ export default async function EntryPage({ params }: { params: Promise<{ id: stri
   if (!entry || entry.created_by !== user.id) notFound();
 
   const editable = RECORDER_EDITABLE.includes(entry.status);
-  const data = editable ? await loadFormData() : null;
+  const data = editable ? await loadFormData(user.profile, { categoryId: entry.category_id, sourceId: entry.source_id }) : null;
 
   return (
     <>

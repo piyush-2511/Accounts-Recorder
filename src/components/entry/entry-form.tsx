@@ -148,8 +148,8 @@ export function EntryForm({ mode, action, categories, sources, limits, suggestio
         </Alert>
       ) : null}
 
-      <div role="radiogroup" aria-label="Entry type" className="grid grid-cols-2 gap-2">
-        {(["expense", "income"] as const).map((k) => (
+      <div role="radiogroup" aria-label="Entry type" className={cn("grid gap-2", categories.some((c) => c.kind === "income") ? "grid-cols-2" : "grid-cols-1")}>
+        {(["expense", "income"] as const).filter((k) => k === "expense" || categories.some((c) => c.kind === "income")).map((k) => (
           <label key={k} className="cursor-pointer">
             <input
               type="radio"

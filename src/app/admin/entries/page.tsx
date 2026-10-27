@@ -9,6 +9,8 @@ import { Card } from "@/components/ui/card";
 import { Field, Input, Select } from "@/components/ui/form";
 import { Table, TableWrap, Td, Th } from "@/components/ui/table";
 import { EmptyState, PageHeader } from "@/components/shared/page-header";
+import { DeleteEntryButton } from "@/components/entry/delete-entry-button";
+import { adminDeleteEntryAction } from "./actions";
 import { Money } from "@/components/shared/money";
 import { Pagination } from "@/components/shared/pagination";
 import { StatusChip } from "@/components/shared/status-chip";
@@ -54,7 +56,7 @@ export default async function AdminEntriesPage({ searchParams }: { searchParams:
 
   return (
     <>
-      <PageHeader title="All entries" description="Every entry across recorders. Open one to edit it or see its history." />
+      <PageHeader title="All entries" description="Every entry across recorders. Edit or delete any entry that has not been exported. Exported entries are locked until their export batch is unlocked." />
       {firstParam(sp.deleted) ? <Alert tone="success" className="mb-3">Entry deleted.</Alert> : null}
       <form method="get" className="mb-4 grid gap-3 rounded-lg border bg-card p-4 sm:grid-cols-3 lg:grid-cols-6">
         <Field label="Status" htmlFor="status">
@@ -103,7 +105,12 @@ export default async function AdminEntriesPage({ searchParams }: { searchParams:
                     <Td className="max-w-xs"><span className="line-clamp-2">{e.narration}</span>{e.receipt_path ? <Paperclip className="mt-1 h-3 w-3 text-muted-foreground" aria-label="Has voucher" /> : null}</Td>
                     <Td className="text-right"><Money value={e.amount} tone={e.kind === "income" ? "income" : "expense"} /></Td>
                     <Td><StatusChip status={e.status} />{e.voucher_no ? <span className="mt-1 block text-xs text-muted-foreground">No. {e.voucher_no}</span> : null}</Td>
-                    <Td className="text-right"><Link href={`/admin/entries/${e.id}`} className={buttonClass("secondary", "sm")}>Open</Link></Td>
+                    <Td className="text-right">
+                      <div className="flex items-center justify-end gap-1">
+                        <Link href={`/admin/entries/${e.id}`} className={buttonClass("secondary", "sm")}>{e.status === "exported" ? "View" : "Edit"}</Link>
+                        {e.status !== "exported" && !e.reimbursement_id ? <DeleteEntryButton id={e.id} action={adminDeleteEntryAction} /> : null}
+                      </div>
+                    </Td>
                   </tr>
                 ))}
               </tbody>

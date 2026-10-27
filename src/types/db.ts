@@ -9,6 +9,13 @@ export interface Profile {
   is_active: boolean;
   reimbursement_ledger: string | null;
   created_at: string;
+  deleted_at: string | null;
+  /** Controls for recorders (admins are never restricted). Null lists mean "everything allowed". */
+  can_record: boolean;
+  can_record_income: boolean;
+  allowed_source_ids: number[] | null;
+  allowed_category_ids: number[] | null;
+  max_entry_amount: number | null;
 }
 
 export interface Category {
