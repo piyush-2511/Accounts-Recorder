@@ -22,7 +22,15 @@ const csp = [
 const nextConfig: NextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
-  experimental: { serverActions: { bodySizeLimit: "1mb" } },
+  compress: true,
+  productionBrowserSourceMaps: false,
+  experimental: {
+    serverActions: { bodySizeLimit: "1mb" },
+    // Smaller client bundle: only the icons actually used are shipped.
+    optimizePackageImports: ["lucide-react"],
+    // Back/forward and repeat visits to a page are instant for 30 seconds (data still refreshes after any save).
+    staleTimes: { dynamic: 30, static: 180 },
+  },
   async headers() {
     return [
       {

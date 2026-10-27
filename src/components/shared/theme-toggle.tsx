@@ -43,6 +43,12 @@ export function ThemeToggle() {
     } catch {
       /* storage blocked: the choice still applies for this visit */
     }
+    // Also kept in a cookie so the server can render the right theme on the very first paint.
+    try {
+      document.cookie = m === "system" ? "theme=; Path=/; Max-Age=0; SameSite=Lax" : `theme=${m}; Path=/; Max-Age=31536000; SameSite=Lax`;
+    } catch {
+      /* cookies blocked */
+    }
     apply(m);
   }
 

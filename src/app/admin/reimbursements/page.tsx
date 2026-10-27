@@ -14,7 +14,20 @@ import { formatINR } from "@/lib/format/money";
 export const metadata = { title: "Reimbursements" };
 
 export default async function ReimbursementsPage() {
-  const people = await getOwedPeople(await createClient());
+  let people;
+  try {
+    people = await getOwedPeople(await createClient());
+  } catch {
+    return (
+      <>
+        <PageHeader title="Reimbursements" />
+        <Alert tone="danger">
+          Reimbursements are not available yet. The database is missing the latest update. In your project run <code className="rounded bg-muted px-1">npx supabase db push</code> to apply
+          migrations 0011 and 0012, wait a few seconds, then refresh this page.
+        </Alert>
+      </>
+    );
+  }
   const today = todayIST();
   const owed = people.filter((p) => p.owed_count > 0);
   const waiting = people.filter((p) => p.awaiting_count > 0);
@@ -52,7 +65,7 @@ export default async function ReimbursementsPage() {
                   const age = p.oldest ? daysBetween(p.oldest, today) : 0;
                   return (
                     <tr key={p.person_id}>
-                      <Td>{p.full_name}<span className="block text-xs text-muted-foreground">{p.email}</span></Td>
+                      <Td><Link href={`/admin/reimbursements/staff/${p.person_id}`} className="font-medium text-primary hover:underline">{p.full_name}</Link><span className="block text-xs text-muted-foreground">{p.email}</span></Td>
                       <Td className="text-right tabular-nums">{p.owed_count}</Td>
                       <Td className="text-right font-medium"><Money value={p.owed_total} /></Td>
                       <Td className="whitespace-nowrap">{p.oldest ? formatDMY(p.oldest) : "-"}{age > 30 ? <span className="ml-1 text-xs text-warning">{age} days</span> : null}</Td>

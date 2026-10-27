@@ -6,10 +6,10 @@ declare
   rec2 uuid := 'bbbbbbbb-0000-0000-0000-000000000002';
   today date := (now() at time zone 'Asia/Kolkata')::date;
   v_own  int := (select id from payment_sources where voucher_mode = 'reimbursable');
-  v_loan int := (select id from payment_sources where voucher_mode = 'journal');
+  v_loan int := (select id from payment_sources where label = 'Loan from Secretary');
   v_bank int := (select id from payment_sources where label = 'Bank');
-  v_fuel int := (select id from categories where label = 'Fuel');
-  v_don  int := (select id from categories where label = 'Donation');
+  v_fuel int := (select id from categories where label in ('Fuel', 'Fuel Expenses') order by (label = 'Fuel Expenses') desc limit 1);
+  v_don  int := (select id from categories where label in ('Donation','Donation - General') order by (label = 'Donation - General') desc limit 1);
   a uuid := '80000000-0000-0000-0000-000000000001';
   b uuid := '80000000-0000-0000-0000-000000000002';
   c uuid := '80000000-0000-0000-0000-000000000003';

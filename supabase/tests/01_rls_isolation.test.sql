@@ -10,7 +10,7 @@ begin
   perform test.login(rec1);
   insert into entries (id, entry_date, kind, category_id, source_id, amount, party, narration)
   values ('10000000-0000-0000-0000-000000000001', d, 'expense',
-          (select id from categories where label = 'Fuel'), (select id from payment_sources where label = 'Cash'),
+          (select id from categories where label = 'Fuel Expenses'), (select id from payment_sources where label = 'Cash'),
           300, 'Piyush', 'Being Fuel Expense paid to Piyush');
   perform test.eq((select count(*) from entries), 1::bigint, 'rec1 sees own entry');
   perform test.eq((select status from entries), 'pending'::entry_status, 'new entries are pending');

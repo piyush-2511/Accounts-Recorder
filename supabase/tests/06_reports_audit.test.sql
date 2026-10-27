@@ -29,7 +29,7 @@ begin
   select * into s from report_summary(today - 10, today, true);
   perform test.eq(s.expense, 800::numeric, 'including pending adds the duplicate');
 
-  perform test.eq((select expense from report_group('category', today - 10, today) where label = 'Fuel'), 300::numeric, 'category report');
+  perform test.eq((select expense from report_group('category', today - 10, today) where label = 'Fuel Expenses'), 300::numeric, 'category report');
   perform test.eq((select count(*) from report_group('programme', today - 10, today)), 2::bigint, 'programme report groups (none)');
   perform test.eq((select count(*) from report_group('nonsense', today - 10, today)), 0::bigint, 'unknown dimension returns nothing');
   perform test.eq((select count(*) from report_monthly(today - 70, today)), 3::bigint, 'monthly series has a row per month');

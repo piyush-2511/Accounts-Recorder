@@ -85,3 +85,34 @@ export async function getReimbursement(supabase: SupabaseClient, id: string): Pr
   const row = data as unknown as ReimbursementRow;
   return { row: { ...row, amount: n(row.amount) }, entries: ((entries ?? []) as unknown as OwedEntry[]).map((e) => ({ ...e, amount: n(e.amount) })) };
 }
+
+// ---- Staff statement ---------------------------------------------------------------------------------
+
+import { buildStatement, type Statement, type StatementEntry, type StatementPayment } from "@/lib/reimbursement/statement";
+
+/** A person's full account: expenses they paid personally and what has been paid back. RLS limits recorders to their own. */
+export async function getStaffStatement(supabase: SupabaseClient, personId: string): Promise<Statement> {
+  const [entriesRes, payRes] = await Promise.all([
+    supabase
+      .from("entries")
+      .select("id, entry_date, amount, narration, status, reimbursement_id, review_note, category:categories(label), source:payment_sources!inner(voucher_mode)")
+      .eq("created_by", personId)
+      .eq("kind", "expense")
+      .eq("source.voucher_mode", "reimbursable")
+      .is("deleted_at", null)
+      .order("entry_date")
+      .limit(2000),
+    supabase
+      .from("reimbursements")
+      .select("id, paid_on, amount, reference, status, source:payment_sources(label)")
+      .eq("person_id", personId)
+      .order("paid_on")
+      .limit(2000),
+  ]);
+  if (entriesRes.error) throw new Error(`Could not load expenses: ${entriesRes.error.message}`);
+  if (payRes.error) throw new Error(`Could not load reimbursements: ${payRes.error.message}`);
+
+  const entries = ((entriesRes.data ?? []) as unknown as (Omit<StatementEntry, "category"> & { category: { label: string } | null })[]).map((e) => ({ ...e, category: e.category?.label ?? null }));
+  const payments = ((payRes.data ?? []) as unknown as (Omit<StatementPayment, "source"> & { source: { label: string } | null })[]).map((p) => ({ ...p, source: p.source?.label ?? null }));
+  return buildStatement(entries, payments);
+}

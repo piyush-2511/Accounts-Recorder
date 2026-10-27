@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import { cookies } from "next/headers";
 import { AuthHashHandler } from "@/components/auth/auth-hash-handler";
 import "./globals.css";
 
@@ -20,9 +21,10 @@ export const viewport: Viewport = {
 // Runs before first paint so there is no light flash for people who chose dark.
 const THEME_SCRIPT = `(function(){try{var t=localStorage.getItem("theme");var d=t==="dark"||((t===null||t==="system")&&window.matchMedia("(prefers-color-scheme: dark)").matches);document.documentElement.classList.toggle("dark",d);}catch(e){}})();`;
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  const theme = (await cookies()).get("theme")?.value;
   return (
-    <html lang="en-IN" suppressHydrationWarning>
+    <html lang="en-IN" className={theme === "dark" ? "dark" : undefined} style={theme === "dark" || theme === "light" ? { colorScheme: theme } : undefined} suppressHydrationWarning>
       <head>
         <script dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} />
       </head>

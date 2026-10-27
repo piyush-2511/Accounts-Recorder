@@ -13,9 +13,10 @@ export default async function RecordLayout({ children }: { children: React.React
         { href: "/record", label: "Home", exact: true },
         { href: "/record/new", label: "New entry" },
         { href: "/record/entries", label: "My entries" },
-        { href: "/record/reimbursements", label: "My reimbursements" },
+        { href: "/record/reimbursements", label: "My account" },
         ...(isAdmin ? [{ href: "/admin", label: "Back to admin", exact: true }] : []),
       ]}
+      homeHref="/record"
     >
       {children}
     </AppShell>

@@ -21,10 +21,13 @@ export default async function AdminLayout({ children }: { children: React.ReactN
         { href: "/admin/reimbursements", label: "Reimburse", badge: peopleOwed },
         { href: "/admin/reports", label: "Reports" },
         { href: "/admin/export", label: "Tally export" },
-        { href: "/admin/settings", label: "Settings" },
-        { href: "/admin/audit", label: "Audit" },
-        { href: "/record/new", label: "Record entry" },
       ]}
+      more={[
+        { href: "/admin/settings", label: "Settings" },
+        { href: "/admin/audit", label: "Audit trail" },
+        { href: "/record/new", label: "Record an entry" },
+      ]}
+      homeHref="/admin"
     >
       {children}
     </AppShell>

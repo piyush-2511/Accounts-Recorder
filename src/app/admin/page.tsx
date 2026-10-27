@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { getGroup, getMonthly, getSummary, previousMonth } from "@/lib/data/reports";
+import { getOwedPeople } from "@/lib/data/reimbursements";
 import { Alert } from "@/components/ui/alert";
 import { buttonClass } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -22,7 +23,7 @@ export default async function AdminDashboard({ searchParams }: { searchParams: P
   const prev = previousMonth(today);
 
   const supabase = await createClient();
-  const [now, before, ytd, monthly, categories, pendingRes, oldest] = await Promise.all([
+  const [now, before, ytd, monthly, categories, pendingRes, oldest, owedPeople] = await Promise.all([
     getSummary(supabase, thisMonth.from, thisMonth.to, includePending),
     getSummary(supabase, prev.from, prev.to, includePending),
     getSummary(supabase, fy.from, today, includePending),
@@ -30,9 +31,12 @@ export default async function AdminDashboard({ searchParams }: { searchParams: P
     getGroup(supabase, "category", fy.from, today, includePending),
     supabase.from("entries").select("id", { count: "exact", head: true }).eq("status", "pending").is("deleted_at", null),
     supabase.from("entries").select("created_at").eq("status", "pending").is("deleted_at", null).order("created_at").limit(1),
+    getOwedPeople(supabase).catch(() => []),
   ]);
 
   const pending = pendingRes.count ?? 0;
+  const owedList = owedPeople.filter((p) => p.owed_count > 0);
+  const owedTotal = owedList.reduce((s, p) => s + p.owed_total, 0);
   const oldestAge = oldest.data?.[0]?.created_at ? daysBetween(String(oldest.data[0].created_at).slice(0, 10), today) : 0;
   const topExpense = categories.filter((c) => c.expense > 0).sort((a, b) => b.expense - a.expense).slice(0, 5).map((c) => ({ label: c.label, value: c.expense }));
 
@@ -52,6 +56,13 @@ export default async function AdminDashboard({ searchParams }: { searchParams: P
         <Alert tone="warning" className="mb-4">
           {pending} {pending === 1 ? "entry is" : "entries are"} waiting for review{oldestAge > 0 ? ` (oldest is ${oldestAge} ${oldestAge === 1 ? "day" : "days"} old)` : ""}.{" "}
           <Link href="/admin/review" className="font-medium underline">Review now</Link>
+        </Alert>
+      ) : null}
+
+      {owedTotal > 0 ? (
+        <Alert tone="info" className="mb-4">
+          {formatINR(owedTotal)} is owed to {owedList.length} {owedList.length === 1 ? "person" : "people"} for expenses they paid personally.{" "}
+          <Link href="/admin/reimbursements" className="font-medium underline">Reimburse</Link>
         </Alert>
       ) : null}
 
