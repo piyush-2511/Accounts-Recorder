@@ -1,5 +1,4 @@
-import ExcelJS from "exceljs";
-import { readFileSync } from "node:fs";
+import { readSheet } from "read-excel-file/node";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { buildVouchers } from "../build-vouchers";
@@ -21,29 +20,20 @@ const entries: ExportEntry[] = [
   },
 ];
 
-async function load(bytes: Uint8Array | Buffer) {
-  const wb = new ExcelJS.Workbook();
-  await wb.xlsx.load(bytes as unknown as ArrayBuffer);
-  return wb;
-}
+const sheet = (bytes: Uint8Array | Buffer, name: string) => readSheet(Buffer.from(bytes), name);
 
 describe("Excel export", () => {
   it("matches the layout and rows of the organisation's Sample_Tally.xlsx exactly", async () => {
-    const sample = await load(readFileSync(join(__dirname, "fixtures", "sample-tally.xlsx")));
-    const expected = sample.worksheets[0]!;
-    const out = await load(await buildXlsx(buildVouchers(entries, { voucherPrefix: "" }), entries));
-    const ws = out.getWorksheet("Vouchers")!;
-
-    const rowValues = (sheet: ExcelJS.Worksheet, n: number) => (sheet.getRow(n).values as ExcelJS.CellValue[]).slice(1);
-    expect(rowValues(ws, 1)).toEqual([...SHEET_HEADERS]);
-    expect(rowValues(ws, 1)).toEqual(rowValues(expected, 1));
-    for (let r = 2; r <= 5; r++) expect(rowValues(ws, r)).toEqual(rowValues(expected, r));
+    const expected = await readSheet(join(__dirname, "fixtures", "sample-tally.xlsx"), 1);
+    const ws = await sheet(await buildXlsx(buildVouchers(entries, { voucherPrefix: "" }), entries), "Vouchers");
+    expect(ws[0]).toEqual([...SHEET_HEADERS]);
+    expect(ws[0]).toEqual(expected[0]);
+    for (let r = 1; r <= 4; r++) expect(ws[r]).toEqual(expected[r]);
   });
 
   it("includes a reference sheet of the original entries", async () => {
-    const out = await load(await buildXlsx(buildVouchers(entries, { voucherPrefix: "" }), entries));
-    const detail = out.getWorksheet("Entries")!;
-    expect(detail.rowCount).toBe(3);
-    expect(detail.getRow(2).getCell(4).value).toBe("Fuel");
+    const detail = await sheet(await buildXlsx(buildVouchers(entries, { voucherPrefix: "" }), entries), "Entries");
+    expect(detail.length).toBe(3);
+    expect(detail[1]![3]).toBe("Fuel");
   });
 });

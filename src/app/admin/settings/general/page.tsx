@@ -29,6 +29,9 @@ export default async function GeneralSettings({ searchParams }: { searchParams: 
             <Field label="XML file encoding" htmlFor="tally_encoding" hint="UTF-8 works on current TallyPrime. Choose UTF-16 only if your Tally rejects UTF-8.">
               <Select id="tally_encoding" name="tally_encoding" defaultValue={s.tallyEncoding}><option value="utf-8">UTF-8</option><option value="utf-16">UTF-16</option></Select>
             </Field>
+            <Field label="Voucher type for reimbursements" htmlFor="reimbursement_voucher_type" hint="Payment is recommended: TallyPrime does not allow cash or bank ledgers in a Journal voucher.">
+              <Select id="reimbursement_voucher_type" name="reimbursement_voucher_type" defaultValue={s.reimbursementVoucherType}><option value="Payment">Payment voucher</option><option value="Journal">Journal voucher</option></Select>
+            </Field>
             <div className="sm:col-span-2"><SubmitButton pendingText="Saving...">Save settings</SubmitButton></div>
           </form>
         </CardContent>

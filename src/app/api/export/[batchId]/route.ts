@@ -79,6 +79,21 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       toCsv([["Voucher No", "Date", "Amount", "Narration", "Has voucher file"], ...rows.map((r) => [`${settings.voucherPrefix}${r.voucher_no}`, formatDMY(r.entry_date), r.amount, r.narration, r.receipt_path ? "yes" : "no"])]),
     ),
   });
+  const { data: reimbursed } = await supabase
+    .from("reimbursements")
+    .select("paid_on, amount, voucher_no, reference, person:profiles!reimbursements_person_id_fkey(full_name)")
+    .eq("batch_id", batchId)
+    .order("voucher_no");
+  const reimbursementRows = ((reimbursed ?? []) as unknown as { paid_on: string; amount: number; voucher_no: number; reference: string | null; person: { full_name: string } | null }[]).map((r) => [
+    `${settings.voucherPrefix}R-${r.voucher_no}`, formatDMY(r.paid_on), r.amount, `Reimbursement to ${r.person?.full_name ?? "staff"}${r.reference ? ` (Ref ${r.reference})` : ""}`, "n/a",
+  ]);
+  files.splice(files.findIndex((f) => f.name === "manifest.csv"), 1);
+  files.push({
+    name: "manifest.csv",
+    data: new TextEncoder().encode(
+      toCsv([["Voucher No", "Date", "Amount", "Narration", "Has voucher file"], ...rows.map((r) => [`${settings.voucherPrefix}${r.voucher_no}`, formatDMY(r.entry_date), r.amount, r.narration, r.receipt_path ? "yes" : "no"]), ...reimbursementRows]),
+    ),
+  });
   const zip = await buildVoucherZip(files);
   return download(zip as unknown as BodyInit, "application/zip", `vouchers_${batch.date_from}_to_${batch.date_to}.zip`);
 }

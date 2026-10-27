@@ -13,6 +13,7 @@ const MODES = (
   <>
     <option value="payment_receipt">Payment / Receipt voucher (cash or bank)</option>
     <option value="journal">Journal voucher (loan or adjustment)</option>
+    <option value="reimbursable">Paid personally by staff, reimbursed later (one ledger per person)</option>
   </>
 );
 

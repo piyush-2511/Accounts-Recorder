@@ -7,8 +7,8 @@ import { requireAdmin } from "@/lib/auth/get-session";
 import { createClient } from "@/lib/supabase/server";
 import { getSettings } from "@/lib/data/reference";
 import { dbMessage } from "@/lib/data/entries";
-import { loadApprovedForExport } from "@/lib/export/service";
-import { buildVouchers, collectLedgers } from "@/lib/tally/build-vouchers";
+import { loadApprovedForExport, loadRecordedReimbursements } from "@/lib/export/service";
+import { buildReimbursementVouchers, buildVouchers, collectLedgers } from "@/lib/tally/build-vouchers";
 import { checkExport } from "@/lib/tally/checks";
 import { buildLedgersXml, buildVouchersXml, encodeXml } from "@/lib/tally/to-xml";
 import { buildXlsx } from "@/lib/tally/to-xlsx";
@@ -36,12 +36,17 @@ export async function generateExportAction(_prev: ActionState, formData: FormDat
   const assigned = await supabase.rpc("assign_voucher_numbers", { p_from: from, p_to: to });
   if (assigned.error) return { status: "error", message: dbMessage(assigned.error) };
 
+  const assignedReimbursements = await supabase.rpc("assign_reimbursement_numbers", { p_from: from, p_to: to });
+  if (assignedReimbursements.error) return { status: "error", message: dbMessage(assignedReimbursements.error) };
+
   const { entries } = await loadApprovedForExport(supabase, from, to, settings.voucherStartNumber);
-  const vouchers = buildVouchers(entries, { voucherPrefix: settings.voucherPrefix });
-  const checks = checkExport(vouchers, entries);
+  const { reimbursements } = await loadRecordedReimbursements(supabase, from, to);
+  const vOptions = { voucherPrefix: settings.voucherPrefix, reimbursementVoucherType: settings.reimbursementVoucherType };
+  const vouchers = [...buildVouchers(entries, vOptions), ...buildReimbursementVouchers(reimbursements, vOptions)];
+  const checks = checkExport(vouchers, entries, reimbursements);
   if (!checks.ok) return { status: "error", message: `Fix these before exporting: ${checks.issues.slice(0, 3).map((i) => i.message).join(" ")}` };
 
-  const ledgersXml = encodeXml(buildLedgersXml(collectLedgers(entries), settings.companyName), settings.tallyEncoding);
+  const ledgersXml = encodeXml(buildLedgersXml(collectLedgers(entries, reimbursements), settings.companyName), settings.tallyEncoding);
   const vouchersXml = encodeXml(buildVouchersXml(vouchers, settings.companyName), settings.tallyEncoding);
   const xlsx = await buildXlsx(vouchers, entries);
 
@@ -59,6 +64,7 @@ export async function generateExportAction(_prev: ActionState, formData: FormDat
 
   const { data: batchId, error } = await supabase.rpc("finalize_export_batch", {
     p_entry_ids: entries.map((e) => e.id),
+    p_reimbursement_ids: reimbursements.map((r) => r.id),
     p_date_from: from,
     p_date_to: to,
     p_ledgers_path: paths.ledgers,

@@ -39,8 +39,11 @@ export async function updateUserAction(formData: FormData): Promise<void> {
   const active = formData.get("is_active") === "on";
   if (!id.success || !(ROLES as readonly string[]).includes(role)) back(PATH, "err", "Invalid request.");
   if (id.data === me.profile.id && (!active || role !== "admin")) back(PATH, "err", "You cannot deactivate or demote your own account.");
+  // The name of this person's payable ledger in Tally (used for expenses they pay personally). Blank = "<Name> - Reimbursable".
+  const ledger = String(formData.get("reimbursement_ledger") ?? "").trim();
+  if (ledger.length > 100 || /[\u0000-\u001f]/.test(ledger)) back(PATH, "err", "The reimbursement ledger name must be 100 characters or fewer, without special characters.");
   const supabase = await createClient();
-  const { error } = await supabase.from("profiles").update({ role, is_active: active }).eq("id", id.data);
+  const { error } = await supabase.from("profiles").update({ role, is_active: active, reimbursement_ledger: ledger === "" ? null : ledger }).eq("id", id.data);
   if (error) back(PATH, "err", "Could not update the user.");
   revalidatePath(PATH);
   back(PATH, "ok", "User updated.");
@@ -61,7 +64,7 @@ export async function resendInviteAction(formData: FormData): Promise<void> {
   const fullName = profile?.full_name ?? String(target.user_metadata?.full_name ?? target.email);
   const role = profile?.role === "admin" ? "admin" : "recorder";
 
-  // Never signed in, so they own no entries: safe to recreate the pending account with a fresh link.
+  // They have not set a password yet, so they own no entries: safe to recreate the pending account with a fresh link.
   const { error: delError } = await admin.auth.admin.deleteUser(id.data);
   if (delError) back(PATH, "err", "Could not reset the invitation. Try again.");
   const { data, error } = await admin.auth.admin.inviteUserByEmail(target.email, {
@@ -73,24 +76,6 @@ export async function resendInviteAction(formData: FormData): Promise<void> {
   revalidatePath(PATH);
   back(PATH, "ok", `New invitation sent to ${target.email}.`);
 }
-
-/** Permanently removes an invited person who has never signed in. Anyone who has signed in is deactivated instead, to keep history. */
-// export async function deleteInviteAction(formData: FormData): Promise<void> {
-//   const me = await requireAdmin();
-//   const id = uuid.safeParse(formData.get("id"));
-//   if (!id.success) back(PATH, "err", "Invalid request.");
-//   if (id.data === me.profile.id) back(PATH, "err", "You cannot delete your own account.");
-//   const admin = createAdminClient();
-//   const { data: found } = await admin.auth.admin.getUserById(id.data);
-//   if (!found?.user) back(PATH, "err", "User not found.");
-//   if (found.user.last_sign_in_at) back(PATH, "err", "This person has already signed in. Untick Active to disable them instead; their history is kept.");
-//   const { count } = await admin.from("entries").select("id", { count: "exact", head: true }).eq("created_by", id.data);
-//   if (count) back(PATH, "err", "This person has recorded entries, so they cannot be deleted. Untick Active instead.");
-//   const { error } = await admin.auth.admin.deleteUser(id.data);
-//   if (error) back(PATH, "err", "Could not delete the invitation.");
-//   revalidatePath(PATH);
-//   back(PATH, "ok", `Invitation for ${found.user.email} deleted.`);
-// }
 
 /**
  * Permanently deletes a user who has no history (no entries recorded, nothing reviewed or exported).

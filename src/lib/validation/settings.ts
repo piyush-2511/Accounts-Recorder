@@ -24,7 +24,7 @@ export const paymentSourceSchema = z.object({
   label: z.string().trim().min(2, "At least 2 characters").max(60),
   tally_ledger: ledgerName,
   tally_group: ledgerName,
-  voucher_mode: z.enum(["payment_receipt", "journal"]),
+  voucher_mode: z.enum(["payment_receipt", "journal", "reimbursable"]),
   sort_order: z.coerce.number().int().min(0).max(999).default(0),
   is_active: z.coerce.boolean().default(true),
 });
@@ -40,6 +40,7 @@ export const generalSettingsSchema = z.object({
     .refine((v) => v === null || (Number.isFinite(v) && v >= 0), "Enter an amount or leave blank"),
   max_amount: z.coerce.number().positive().max(100_000_000),
   tally_encoding: z.enum(["utf-8", "utf-16"]),
+  reimbursement_voucher_type: z.enum(["Payment", "Journal"]).default("Payment"),
 });
 
 export const inviteUserSchema = z.object({

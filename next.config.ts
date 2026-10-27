@@ -22,7 +22,6 @@ const csp = [
 const nextConfig: NextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
-  serverExternalPackages: ["exceljs"],
   experimental: { serverActions: { bodySizeLimit: "1mb" } },
   async headers() {
     return [

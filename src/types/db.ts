@@ -7,6 +7,7 @@ export interface Profile {
   email: string;
   role: Role;
   is_active: boolean;
+  reimbursement_ledger: string | null;
   created_at: string;
 }
 
@@ -25,7 +26,7 @@ export interface PaymentSource {
   label: string;
   tally_ledger: string;
   tally_group: string;
-  voucher_mode: "payment_receipt" | "journal";
+  voucher_mode: "payment_receipt" | "journal" | "reimbursable";
   sort_order: number;
   is_active: boolean;
 }
@@ -50,6 +51,8 @@ export interface EntryRow {
   batch_id: string | null;
   voucher_no: number | null;
   voucher_fy: number;
+  payable_ledger: string | null;
+  reimbursement_id: string | null;
   created_by: string;
   created_at: string;
   updated_at: string;
@@ -69,6 +72,7 @@ export interface ExportBatch {
   date_from: string;
   date_to: string;
   entry_count: number;
+  reimbursement_count: number;
   total_amount: number;
   ledgers_path: string;
   xml_path: string;
@@ -95,6 +99,25 @@ export interface AppSettings {
   voucherRequiredAbove: number | null;
   maxAmount: number;
   tallyEncoding: "utf-8" | "utf-16";
+  reimbursementVoucherType: "Payment" | "Journal";
+}
+
+export interface Reimbursement {
+  id: string;
+  person_id: string;
+  source_id: number;
+  paid_on: string;
+  amount: number;
+  entry_count: number;
+  reference: string | null;
+  note: string | null;
+  status: "recorded" | "exported" | "voided";
+  batch_id: string | null;
+  voucher_no: number | null;
+  created_by: string;
+  created_at: string;
+  voided_at: string | null;
+  void_reason: string | null;
 }
 
 export interface FlagRow {

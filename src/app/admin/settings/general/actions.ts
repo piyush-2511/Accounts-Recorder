@@ -20,6 +20,7 @@ export async function saveGeneralAction(formData: FormData): Promise<void> {
     { key: "voucher_required_above", value: v.voucher_required_above },
     { key: "max_amount", value: v.max_amount },
     { key: "tally_encoding", value: v.tally_encoding },
+    { key: "reimbursement_voucher_type", value: v.reimbursement_voucher_type },
   ];
   const supabase = await createClient();
   const { error } = await supabase.from("app_settings").upsert(rows, { onConflict: "key" });

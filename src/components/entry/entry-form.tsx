@@ -98,6 +98,15 @@ export function EntryForm({ mode, action, categories, sources, limits, suggestio
     setV((prev) => ({ ...prev, narration: defaultNarration({ kind: prev.kind, categoryLabel: category.label, party: prev.party, programme: prev.programme }) }));
   }, [narrationTouched, category, v.party, v.programme, v.kind]);
 
+  // "Paid by me (reimburse later)" only makes sense for expenses.
+  const sourceOptions = sources.filter((s) => (s.is_active || String(s.id) === v.source_id) && !(v.kind === "income" && s.voucher_mode === "reimbursable"));
+  const selectedSource = sources.find((s) => String(s.id) === v.source_id);
+  useEffect(() => {
+    if (v.kind === "income" && selectedSource?.voucher_mode === "reimbursable") {
+      setV((prev) => ({ ...prev, source_id: String(sources.find((s) => s.is_active && s.voucher_mode !== "reimbursable")?.id ?? "") }));
+    }
+  }, [v.kind, selectedSource, sources]);
+
   // After a successful create: clear the per-entry fields, keep date / source / programme for the next one.
   useEffect(() => {
     if (mode !== "create" || state.status !== "success") return;
@@ -179,9 +188,9 @@ export function EntryForm({ mode, action, categories, sources, limits, suggestio
         <Field label="Date" htmlFor="entry_date" error={err("entry_date")}>
           <Input id="entry_date" name="entry_date" type="date" min={limits.minDate} max={limits.today} value={v.entry_date} onChange={(e) => set("entry_date", e.target.value)} aria-invalid={!!err("entry_date")} />
         </Field>
-        <Field label={v.kind === "expense" ? "Paid from" : "Received in"} htmlFor="source_id" error={err("source_id")}>
+        <Field label={v.kind === "expense" ? "Paid from" : "Received in"} htmlFor="source_id" error={err("source_id")} hint={selectedSource?.voucher_mode === "reimbursable" ? "You paid this yourself. The organisation pays you back after the admin approves it." : undefined}>
           <Select id="source_id" name="source_id" value={v.source_id} onChange={(e) => set("source_id", e.target.value)}>
-            {sources.filter((s) => s.is_active || String(s.id) === v.source_id).map((s) => (
+            {sourceOptions.map((s) => (
               <option key={s.id} value={s.id}>{s.label}</option>
             ))}
           </Select>

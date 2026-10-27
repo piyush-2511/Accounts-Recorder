@@ -44,6 +44,11 @@ export default async function Users({ searchParams }: { searchParams: Promise<Re
                 <Field label="Role" htmlFor={`r-${u.id}`}><Select id={`r-${u.id}`} name="role" defaultValue={u.role}><option value="recorder">Recorder</option><option value="admin">Admin</option></Select></Field>
                 <label className="flex h-10 items-center gap-2 text-sm"><input type="checkbox" name="is_active" defaultChecked={u.is_active} className="h-4 w-4" /> Active</label>
                 <SubmitButton variant="secondary" pendingText="Saving...">Save</SubmitButton>
+                <div className="sm:col-span-4">
+                  <Field label="Tally ledger for this person's reimbursements (optional)" htmlFor={`l-${u.id}`} hint={`Leave blank to use “${u.full_name} - Reimbursable”. Changing it only affects expenses recorded from now on.`}>
+                    <Input id={`l-${u.id}`} name="reimbursement_ledger" defaultValue={u.reimbursement_ledger ?? ""} maxLength={100} autoComplete="off" />
+                  </Field>
+                </div>
               </form>
               <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-2">
                 {pending.has(u.id) ? (

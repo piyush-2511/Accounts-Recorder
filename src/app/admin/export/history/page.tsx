@@ -28,7 +28,7 @@ export default async function ExportHistoryPage({ searchParams }: { searchParams
           Export created. Import <strong>ledgers.xml</strong> first (only needed when ledgers are new), then <strong>vouchers.xml</strong>, in TallyPrime: Import → choose the file.
         </Alert>
       ) : null}
-      {firstParam(sp.unlocked) ? <Alert tone="success" className="mb-4">Batch unlocked. {firstParam(sp.unlocked)} entries are Approved again.</Alert> : null}
+      {firstParam(sp.unlocked) ? <Alert tone="success" className="mb-4">Batch unlocked. {firstParam(sp.unlocked)} vouchers are open again (entries Approved, reimbursements Recorded).</Alert> : null}
       {firstParam(sp.error) ? <Alert tone="danger" className="mb-4">{firstParam(sp.error)}</Alert> : null}
 
       {batches.length === 0 ? (
@@ -43,7 +43,7 @@ export default async function ExportHistoryPage({ searchParams }: { searchParams
                   <tr key={b.id} className={b.id === newId ? "bg-success/5" : undefined}>
                     <Td className="whitespace-nowrap">{new Date(b.created_at).toLocaleString("en-IN", { timeZone: "Asia/Kolkata", dateStyle: "medium", timeStyle: "short" })}</Td>
                     <Td className="whitespace-nowrap">{formatDMY(b.date_from)} to {formatDMY(b.date_to)}</Td>
-                    <Td className="text-right tabular-nums">{b.entry_count}</Td>
+                    <Td className="text-right tabular-nums">{b.entry_count + b.reimbursement_count}{b.reimbursement_count ? <span className="block text-xs text-muted-foreground">{b.reimbursement_count} reimbursement{b.reimbursement_count === 1 ? "" : "s"}</span> : null}</Td>
                     <Td className="text-right"><Money value={b.total_amount} /></Td>
                     <Td>
                       <div className="flex flex-wrap gap-1">
@@ -54,7 +54,7 @@ export default async function ExportHistoryPage({ searchParams }: { searchParams
                         ))}
                       </div>
                     </Td>
-                    <Td className="text-right">{b.unlocked_at ? <Badge tone="neutral">Unlocked</Badge> : <UnlockButton batchId={b.id} count={b.entry_count} />}</Td>
+                    <Td className="text-right">{b.unlocked_at ? <Badge tone="neutral">Unlocked</Badge> : <UnlockButton batchId={b.id} count={b.entry_count + b.reimbursement_count} />}</Td>
                   </tr>
                 ))}
               </tbody>

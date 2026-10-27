@@ -15,7 +15,7 @@ export function UnlockButton({ batchId, count }: { batchId: string; count: numbe
         <form action={unlockBatchAction} className="space-y-3 text-sm">
           <input type="hidden" name="batch_id" value={batchId} />
           <p>
-            The {count} entries return to <strong>Approved</strong> so they can be corrected and exported again. They keep their voucher numbers.
+            The {count} vouchers reopen: entries return to <strong>Approved</strong> and reimbursements to <strong>Recorded</strong>, so they can be corrected and exported again. They keep their voucher numbers.
             Only unlock a batch if the Tally import failed or was not done. If it was imported, delete those vouchers in Tally first.
           </p>
           <div className="flex justify-end gap-2">

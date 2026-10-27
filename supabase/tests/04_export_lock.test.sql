@@ -27,8 +27,8 @@ begin
   perform test.is_true((select voucher_no from entries where id = e2) < (select voucher_no from entries where id = e1), 'older entry gets lower number');
   perform test.eq(assign_voucher_numbers(today - 30, today), 0, 'numbering is idempotent');
 
-  perform test.throws(format($q$select finalize_export_batch(array[%L, %L]::uuid[], %L, %L, 'a', 'b', 'c')$q$, e1, e3, today - 30, today), 'no longer approved');
-  batch := finalize_export_batch(array[e1, e2], today - 30, today, 'b/ledgers.xml', 'b/vouchers.xml', 'b/vouchers.xlsx');
+  perform test.throws(format($q$select finalize_export_batch(array[%L, %L]::uuid[], '{}'::uuid[], %L, %L, 'a', 'b', 'c')$q$, e1, e3, today - 30, today), 'no longer approved');
+  batch := finalize_export_batch(array[e1, e2], '{}'::uuid[], today - 30, today, 'b/ledgers.xml', 'b/vouchers.xml', 'b/vouchers.xlsx');
   perform test.eq((select count(*) from entries where status = 'exported' and batch_id = batch), 2::bigint, 'entries exported');
   perform test.eq((select total_amount from export_batches where id = batch), 550.00::numeric, 'batch total');
 

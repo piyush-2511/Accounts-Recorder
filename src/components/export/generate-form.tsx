@@ -15,9 +15,9 @@ export function GenerateForm({ from, to, disabled, count }: { from: string; to: 
       <input type="hidden" name="to" value={to} />
       <FormMessage state={state} />
       <SubmitButton size="lg" disabled={disabled} pendingText="Generating...">
-        <Download className="h-4 w-4" aria-hidden /> Generate Tally files for {count} {count === 1 ? "entry" : "entries"}
+        <Download className="h-4 w-4" aria-hidden /> Generate Tally files for {count} {count === 1 ? "voucher" : "vouchers"}
       </SubmitButton>
-      <p className="text-xs text-muted-foreground">This gives each entry its voucher number and locks the entries. If the Tally import fails you can unlock the batch.</p>
+      <p className="text-xs text-muted-foreground">This gives each voucher its number and locks the entries and reimbursements. If the Tally import fails you can unlock the batch.</p>
     </form>
   );
 }

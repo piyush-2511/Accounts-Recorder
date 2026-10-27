@@ -1,6 +1,6 @@
 import { plainAmount } from "../format/money";
-import { collectLedgers } from "./build-vouchers";
-import type { ExportEntry, TallyVoucher } from "./types";
+import { creditAccount, ledgerPairs } from "./build-vouchers";
+import type { ExportEntry, ExportReimbursement, TallyVoucher } from "./types";
 
 export interface ExportIssue {
   entryId: string | null;
@@ -18,7 +18,7 @@ export interface ExportChecks {
 const CONTROL = /[\u0000-\u001f]/;
 
 /** Pre-flight checks shown on the export preview. Any issue blocks Generate. */
-export function checkExport(vouchers: TallyVoucher[], entries: ExportEntry[]): ExportChecks {
+export function checkExport(vouchers: TallyVoucher[], entries: ExportEntry[], reimbursements: ExportReimbursement[] = []): ExportChecks {
   const issues: ExportIssue[] = [];
   let debit = 0;
   let credit = 0;
@@ -45,22 +45,33 @@ export function checkExport(vouchers: TallyVoucher[], entries: ExportEntry[]): E
 
   // The same ledger name must always sit under the same Tally group.
   const parents = new Map<string, string>();
-  const add = (name: string, parent: string) => {
+  for (const { name, parent } of ledgerPairs(entries, reimbursements)) {
     const key = name.trim().toLowerCase();
     const existing = parents.get(key);
     if (existing && existing.toLowerCase() !== parent.trim().toLowerCase()) {
       issues.push({ entryId: null, message: `Ledger "${name}" is configured under two different groups ("${existing}" and "${parent}"). Fix it in Settings.` });
     }
     parents.set(key, parent.trim());
-  };
-  for (const e of entries) {
-    add(e.category.tally_ledger, e.category.tally_group);
-    add(e.source.tally_ledger, e.source.tally_group);
   }
-  collectLedgers(entries); // throws nothing; kept to document the dependency
+
+  // One payable ledger must belong to exactly one person, or two people's balances would be mixed in Tally.
+  const owners = new Map<string, Set<string>>();
+  for (const e of entries) {
+    if (e.source.voucher_mode !== "reimbursable" || !e.created_by) continue;
+    const key = creditAccount(e).ledger.toLowerCase();
+    owners.set(key, (owners.get(key) ?? new Set()).add(e.created_by));
+  }
+  for (const [ledger, people] of owners) {
+    if (people.size > 1) issues.push({ entryId: null, message: `Payable ledger "${ledger}" is shared by ${people.size} people. Give each person a different ledger name in Settings > Users.` });
+  }
+  for (const e of entries) {
+    if (e.source.voucher_mode === "reimbursable" && creditAccount(e).ledger === "") {
+      issues.push({ entryId: e.id, message: "A reimbursable expense has no payable ledger name." });
+    }
+  }
 
   if (debit !== credit) issues.push({ entryId: null, message: "Total debits do not equal total credits." });
-  if (vouchers.length === 0) issues.push({ entryId: null, message: "There are no approved entries in this date range." });
+  if (vouchers.length === 0) issues.push({ entryId: null, message: "There are no approved entries or reimbursements in this date range." });
 
   return { ok: issues.length === 0, issues, voucherCount: vouchers.length, totalDebit: plainAmount(debit), totalCredit: plainAmount(credit) };
 }

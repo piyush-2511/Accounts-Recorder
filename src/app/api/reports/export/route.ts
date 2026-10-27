@@ -1,4 +1,4 @@
-import ExcelJS from "exceljs";
+import writeExcelFile from "write-excel-file/node";
 import { NextResponse, type NextRequest } from "next/server";
 import { getCurrentUser } from "@/lib/auth/get-session";
 import { createClient } from "@/lib/supabase/server";
@@ -39,13 +39,12 @@ export async function GET(request: NextRequest) {
       headers: { ...headers, "Content-Type": "text/csv; charset=utf-8", "Content-Disposition": `attachment; filename="${name}.csv"` },
     });
   }
-  const wb = new ExcelJS.Workbook();
-  const ws = wb.addWorksheet("Report");
-  ws.addRow(header).font = { bold: true };
-  for (const r of body) ws.addRow(r);
-  ws.columns = [{ width: 32 }, { width: 16, style: { numFmt: "#,##0.00" } }, { width: 16, style: { numFmt: "#,##0.00" } }, { width: 10 }];
-  const buf = await wb.xlsx.writeBuffer();
-  return new NextResponse(new Uint8Array(buf as ArrayBuffer), {
+  const sheet = [
+    header.map((value) => ({ value, fontWeight: "bold" as const })),
+    ...body.map((r) => r.map((v, i) => (typeof v === "number" && i < 3 && i > 0 ? { value: v, format: "#,##0.00" } : v))),
+  ];
+  const buf = await writeExcelFile(sheet, { sheet: "Report", columns: [{ width: 32 }, { width: 16 }, { width: 16 }, { width: 10 }], stickyRowsCount: 1 }).toBuffer();
+  return new NextResponse(new Uint8Array(buf), {
     headers: { ...headers, "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "Content-Disposition": `attachment; filename="${name}.xlsx"` },
   });
 }

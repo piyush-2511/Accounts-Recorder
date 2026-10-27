@@ -49,6 +49,7 @@ See `docs/user-guide-recorder.md` and `docs/user-guide-admin.md`. Tally steps: `
 * Row level security on every table; recorders only ever see their own entries.
 * A database trigger enforces the workflow: status changes happen only through review/export functions, approved and exported entries are locked, exported ones cannot change without an admin unlocking the batch.
 * Vouchers: validated in the browser, again on the server by file signature, and a third time by the storage bucket (200 KB hard limit). Private bucket; files are viewed through short-lived signed links.
+* Staff who pay from their own pocket choose “Paid by me (reimburse later)”; the admin reimburses them from the Reimburse page and the settlement voucher is exported to Tally.
 * Admins must complete two-factor authentication. Sign-up is disabled; users are invited.
 * Strict content security policy and security headers; CSV formula-injection protection; every change is written to an append-only audit log.
 

@@ -2,8 +2,8 @@ import Link from "next/link";
 import { AlertTriangle, CheckCircle2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { getSettings } from "@/lib/data/reference";
-import { loadApprovedForExport } from "@/lib/export/service";
-import { buildVouchers } from "@/lib/tally/build-vouchers";
+import { loadApprovedForExport, loadRecordedReimbursements } from "@/lib/export/service";
+import { buildReimbursementVouchers, buildVouchers } from "@/lib/tally/build-vouchers";
 import { checkExport } from "@/lib/tally/checks";
 import { GenerateForm } from "@/components/export/generate-form";
 import { Alert } from "@/components/ui/alert";
@@ -31,8 +31,11 @@ export default async function ExportPage({ searchParams }: { searchParams: Promi
   const supabase = await createClient();
   const settings = await getSettings(supabase);
   const { entries, provisional } = rangeOk.success ? await loadApprovedForExport(supabase, from, to, settings.voucherStartNumber) : { entries: [], provisional: new Set<string>() };
-  const vouchers = buildVouchers(entries, { voucherPrefix: settings.voucherPrefix });
-  const checks = checkExport(vouchers, entries);
+  const rPreview = rangeOk.success ? await loadRecordedReimbursements(supabase, from, to) : { reimbursements: [], provisional: new Set<string>() };
+  const vOptions = { voucherPrefix: settings.voucherPrefix, reimbursementVoucherType: settings.reimbursementVoucherType };
+  const vouchers = [...buildVouchers(entries, vOptions), ...buildReimbursementVouchers(rPreview.reimbursements, vOptions)];
+  const checks = checkExport(vouchers, entries, rPreview.reimbursements);
+  for (const id of rPreview.provisional) provisional.add(id);
   const byId = new Map(entries.map((e) => [e.id, e]));
 
   const { count: pendingInRange } = await supabase.from("entries").select("id", { count: "exact", head: true }).eq("status", "pending").is("deleted_at", null).gte("entry_date", from).lte("entry_date", to);
@@ -66,13 +69,13 @@ export default async function ExportPage({ searchParams }: { searchParams: Promi
         </Alert>
       ) : null}
 
-      {entries.length === 0 ? (
-        <EmptyState title="No approved entries in this range">Approve entries in the review queue, or widen the dates.</EmptyState>
+      {vouchers.length === 0 ? (
+        <EmptyState title="Nothing to export in this range">Approve entries in the review queue, record reimbursements, or widen the dates.</EmptyState>
       ) : (
         <div className="grid gap-4 lg:grid-cols-[1fr_20rem]">
           <Card>
             <CardHeader>
-              <CardTitle>Vouchers to export ({vouchers.length})</CardTitle>
+              <CardTitle>Vouchers to export ({vouchers.length}{rPreview.reimbursements.length ? `, including ${rPreview.reimbursements.length} reimbursement${rPreview.reimbursements.length === 1 ? "" : "s"}` : ""})</CardTitle>
               <CardDescription>Voucher numbers marked * are provisional and are fixed when you generate.</CardDescription>
             </CardHeader>
             <TableWrap>
@@ -83,7 +86,7 @@ export default async function ExportPage({ searchParams }: { searchParams: Promi
                     <tr key={v.entryId}>
                       <Td className="whitespace-nowrap">{v.number}{provisional.has(v.entryId) ? "*" : ""}</Td>
                       <Td className="whitespace-nowrap">{formatDMY(v.date)}</Td>
-                      <Td>{v.type}</Td>
+                      <Td>{v.type}{rPreview.reimbursements.some((r) => r.id === v.entryId) ? <span className="ml-1 text-xs text-muted-foreground">(reimbursement)</span> : null}</Td>
                       <Td>{v.lines.find((l) => l.side === "Dr")?.ledger}</Td>
                       <Td>{v.lines.find((l) => l.side === "Cr")?.ledger}</Td>
                       <Td className="text-right"><Money value={(v.lines[0]?.paise ?? 0) / 100} /></Td>

@@ -32,5 +32,6 @@ export async function getSettings(supabase: SupabaseClient): Promise<AppSettings
     voucherRequiredAbove: typeof required === "number" ? required : null,
     maxAmount: num("max_amount", 1_000_000),
     tallyEncoding: str("tally_encoding", "utf-8") === "utf-16" ? "utf-16" : "utf-8",
+    reimbursementVoucherType: str("reimbursement_voucher_type", "Payment") === "Journal" ? "Journal" : "Payment",
   };
 }
