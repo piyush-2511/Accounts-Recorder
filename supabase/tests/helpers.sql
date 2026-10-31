@@ -65,4 +65,5 @@ insert into public.profiles (id, full_name, email, role, is_active) values
   ('aaaaaaaa-0000-0000-0000-000000000001', 'Admin User', 'admin@test.org', 'admin', true),
   ('bbbbbbbb-0000-0000-0000-000000000001', 'Recorder One', 'rec1@test.org', 'recorder', true),
   ('bbbbbbbb-0000-0000-0000-000000000002', 'Recorder Two', 'rec2@test.org', 'recorder', true),
-  ('bbbbbbbb-0000-0000-0000-000000000003', 'Inactive Rec', 'inactive@test.org', 'recorder', false);
+  ('bbbbbbbb-0000-0000-0000-000000000003', 'Inactive Rec', 'inactive@test.org', 'recorder', false)
+on conflict (id) do update set full_name = excluded.full_name, role = excluded.role, is_active = excluded.is_active;

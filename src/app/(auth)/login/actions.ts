@@ -19,7 +19,11 @@ export async function loginAction(_prev: ActionState, formData: FormData): Promi
   }
 
   const { data: profile } = await supabase.from("profiles").select("role,is_active").eq("id", data.user.id).maybeSingle();
-  if (!profile || !profile.is_active) {
+  if (!profile) {
+    await supabase.auth.signOut();
+    return { status: "error", message: "Your account is not set up in the app yet. Ask your administrator to invite you from Settings > Users." };
+  }
+  if (!profile.is_active) {
     await supabase.auth.signOut();
     return { status: "error", message: "This account is disabled. Contact your administrator." };
   }

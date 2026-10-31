@@ -7,10 +7,11 @@ begin
     raise exception 'FAIL: signup profile missing or role not recorder';
   end if;
 end $$;
+-- A login created without a name (for example in the Supabase dashboard) still gets a recorder profile.
 insert into auth.users (id, email) values ('00000000-0000-0000-0000-0000000000a2', 'noname@example.org');
 do $$
 begin
-  if exists (select 1 from public.profiles where id = '00000000-0000-0000-0000-0000000000a2') then
-    raise exception 'FAIL: profile created without a name';
+  if (select full_name || '/' || role from public.profiles where id = '00000000-0000-0000-0000-0000000000a2') is distinct from 'noname/recorder' then
+    raise exception 'FAIL: nameless signup should get a profile named from the email';
   end if;
 end $$;

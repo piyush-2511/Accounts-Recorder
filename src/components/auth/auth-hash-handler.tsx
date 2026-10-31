@@ -1,18 +1,15 @@
 "use client";
 
 import { useEffect } from "react";
-import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
 /**
- * Supabase's default invite and reset emails send people back with the session in the URL
- * fragment (#access_token=...), which servers never see. This turns that into a normal
- * signed-in session, then sends the person to choose their password.
- * Runs on every page so it works wherever the email link lands (home, login, accept-invite).
+ * Supabase's invite and reset emails send people back with the session in the URL fragment
+ * (#access_token=...), which servers never see. This turns it into a signed-in session and then
+ * does a full page load of the password page, so the new cookies are always sent and no cached
+ * page can get in the way. Runs on every page, so it works wherever the email link lands.
  */
 export function AuthHashHandler() {
-  const router = useRouter();
-
   useEffect(() => {
     const hash = window.location.hash;
     if (hash.length < 2) return;
@@ -21,7 +18,7 @@ export function AuthHashHandler() {
 
     if (params.get("error") || params.get("error_code")) {
       window.history.replaceState(null, "", clean);
-      router.replace("/login?error=link");
+      window.location.replace("/login?error=link");
       return;
     }
     const accessToken = params.get("access_token");
@@ -33,11 +30,10 @@ export function AuthHashHandler() {
       .auth.setSession({ access_token: accessToken, refresh_token: refreshToken })
       .then(({ error }) => {
         window.history.replaceState(null, "", clean);
-        if (error) return router.replace("/login?error=link");
-        router.replace(type === "invite" || type === "recovery" ? "/accept-invite" : "/");
-        router.refresh();
+        if (error) return window.location.replace("/login?error=link");
+        window.location.replace(type === "invite" || type === "recovery" ? "/accept-invite" : "/");
       });
-  }, [router]);
+  }, []);
 
   return null;
 }
